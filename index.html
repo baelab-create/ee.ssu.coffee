@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1e3932">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>학부회의 커피 주문 | SSU Electrical Eng.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Noto+Serif+KR:wght@400;500;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --starbucks-green: #006241;
+    --starbucks-dark: #1e3932;
+    --starbucks-accent: #cba258;
+    --starbucks-cream: #f1f8f6;
+    --starbucks-light: #fafaf7;
+    --ink: #1a1a1a;
+    --ink-soft: #666;
+    --line: #e4e4e0;
+    --bg: #f5f2ec;
+    --danger: #c0392b;
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+    --safe-top: env(safe-area-inset-top, 0);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding-bottom: calc(100px + var(--safe-bottom));
+    overflow-x: hidden;
+  }
+
+  button { font-family: inherit; -webkit-appearance: none; appearance: none; }
+  input { font-family: inherit; -webkit-appearance: none; appearance: none; }
+
+  /* ========== Header ========== */
+  .header {
+    background: var(--starbucks-dark);
+    color: white;
+    padding: calc(1.25rem + var(--safe-top)) 1.25rem 1.25rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .brand-mark {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--starbucks-accent);
+    text-transform: uppercase;
+  }
+
+  .counter {
+    background: var(--starbucks-accent);
+    color: var(--starbucks-dark);
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .counter .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 900;
+    font-size: 1.4rem;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
+  }
+
+  h1 .accent {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    color: var(--starbucks-accent);
+    font-weight: 700;
+  }
+
+  .header-tagline {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.82);
+    margin: 0.5rem 0 0.3rem;
+    line-height: 1.5;
+    font-weight: 300;
+    word-break: keep-all;
+  }
+
+  .header-tagline em {
+    font-style: normal;
+    color: var(--starbucks-accent);
+    font-weight: 600;
+    font-family: 'Noto Serif KR', serif;
+  }
+
+  .header-date {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.65);
+  }
+
+  /* ========== Name Input ========== */
+  .name-input-section {
+    background: white;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .name-input-wrap {
+    position: relative;
+  }
+
+  .name-input-wrap::before {
+    content: '👤';
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    pointer-events: none;
+  }
+
+  .name-input {
+    width: 100%;
+    padding: 0.9rem 1rem 0.9rem 2.5rem;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    background: var(--starbucks-light);
+  }
+
+  .name-input:focus {
+    outline: none;
+    border-color: var(--starbucks-green);
+    background: white;
+  }
+
+  .name-input::placeholder {
+    color: #aaa;
+    font-weight: 400;
+  }
+
+  /* ========== Container ========== */
+  .container {
+    padding: 1.25rem;
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .section-title .num {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    color: var(--starbucks-accent);
+    font-size: 1rem;
+  }
+
+  .section-title h2 {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--starbucks-dark);
+  }
+
+  .section-title .count {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    background: white;
+    padding: 0.25rem 0.7rem;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+
+  /* ========== Menu Grid ========== */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .menu-item {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem 0.6rem 0.9rem;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    user-select: none;
+    transition: transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu-item:active {
+    transform: scale(0.96);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .menu-item.rank-1, .menu-item.rank-2, .menu-item.rank-3 {
+    background: linear-gradient(180deg, #fff 0%, var(--starbucks-cream) 100%);
+  }
+
+  .rank-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    background: white;
+    color: var(--starbucks-dark);
+    border: 1px solid var(--line);
+  }
+
+  .menu-item.rank-1 .rank-badge,
+  .menu-item.rank-2 .rank-badge,
+  .menu-item.rank-3 .rank-badge {
+    background: var(--starbucks-accent);
+    color: white;
+    border: none;
+  }
+
+  .menu-item.rank-1 .rank-badge::before {
+    content: '♔';
+    position: absolute;
+    top: -12px;
+    font-size: 0.95rem;
+    color: var(--starbucks-accent);
+  }
+
+  .menu-icon {
+    font-size: 2.5rem;
+    margin: 0.3rem 0 0.5rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+  }
+
+  .menu-name {
+    font-weight: 500;
+    font-size: 0.82rem;
+    color: var(--ink);
+    line-height: 1.3;
+    word-break: keep-all;
+  }
+
+  .menu-tag {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ========== Order List ========== */
+  .order-list {
+    background: white;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .order-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+
+  .order-empty-icon {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+    opacity: 0.3;
+  }
+
+  .order-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .order-item:last-child { border-bottom: none; }
+
+  .order-num {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--starbucks-accent);
+    min-width: 22px;
+    font-weight: 700;
+  }
+
+  .order-details strong {
+    display: block;
+    font-size: 0.92rem;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+    line-height: 1.3;
+    word-break: keep-all;
+  }
+
+  .order-details small {
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+    display: block;
+  }
+
+  .order-person {
+    font-size: 0.72rem;
+    color: var(--starbucks-dark);
+    font-weight: 600;
+    background: var(--starbucks-cream);
+    padding: 0.2rem 0.55rem;
+    border-radius: 12px;
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+
+  .delete-btn {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .delete-btn:active {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+  }
+
+  /* ========== Bottom Action Bar ========== */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 0.85rem 1rem calc(0.85rem + var(--safe-bottom));
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    z-index: 60;
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .btn-preview, .btn-send {
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0.95rem 0.5rem;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 50px;
+  }
+
+  .btn-preview {
+    background: white;
+    color: var(--starbucks-dark);
+    border: 1.5px solid var(--starbucks-dark);
+    flex: 0 0 38%;
+    font-size: 0.85rem;
+  }
+
+  .btn-preview:active {
+    background: var(--starbucks-dark);
+    color: white;
+  }
+
+  .btn-send {
+    background: var(--starbucks-green);
+    color: white;
+    flex: 1;
+    font-size: 0.92rem;
+    box-shadow: 0 2px 8px rgba(0, 98, 65, 0.25);
+  }
+
+  .btn-send:active:not(:disabled) {
+    background: var(--starbucks-dark);
+    transform: scale(0.98);
+  }
+
+  .btn-send:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ========== Options Modal (Bottom Sheet) ========== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 57, 50, 0.5);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .modal-sheet {
+    background: white;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    border-radius: 16px 16px 0 0;
+    padding: 1rem 1.25rem calc(1.25rem + var(--safe-bottom));
+    animation: slideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    overflow-y: auto;
+  }
+
+  .modal-handle {
+    width: 40px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    margin: 0 auto 1rem;
+  }
+
+  .modal-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--starbucks-dark);
+    margin-bottom: 0.15rem;
+    line-height: 1.3;
+  }
+
+  .modal-subtitle {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin-bottom: 1.25rem;
+  }
+
+  .option-group {
+    margin-bottom: 1.1rem;
+  }
+
+  .option-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.55rem;
+    font-weight: 600;
+  }
+
+  .option-buttons {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .option-buttons.temp { grid-template-columns: repeat(2, 1fr); }
+  .option-buttons.size { grid-template-columns: repeat(3, 1fr); }
+
+  .option-btn {
+    padding: 0.8rem 0.5rem;
+    border: 1.5px solid var(--line);
+    background: white;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 44px;
+  }
+
+  .option-btn:active { transform: scale(0.96); }
+
+  .option-btn.selected {
+    background: var(--starbucks-green);
+    color: white;
+    border-color: var(--starbucks-green);
+  }
+
+  .option-note {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.88rem;
+  }
+
+  .option-note:focus {
+    outline: none;
+    border-color: var(--starbucks-green);
+  }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+
+  .modal-btn {
+    padding: 0.95rem 0.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 50px;
+    transition: all 0.15s;
+  }
+
+  .modal-btn.cancel {
+    background: var(--starbucks-light);
+    color: var(--ink-soft);
+  }
+
+  .modal-btn.confirm {
+    background: var(--starbucks-dark);
+    color: white;
+  }
+
+  .modal-btn:active { transform: scale(0.97); }
+
+  /* ========== Preview Modal ========== */
+  .preview-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 57, 50, 0.6);
+    z-index: 110;
+    align-items: flex-end;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+
+  .preview-modal.active { display: flex; }
+
+  .preview-content {
+    background: white;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    padding: 1rem 1.25rem calc(1.25rem + var(--safe-bottom));
+    overflow-y: auto;
+    animation: slideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--starbucks-accent);
+  }
+
+  .preview-header h2 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.1rem;
+    color: var(--starbucks-dark);
+  }
+
+  .preview-close {
+    background: var(--starbucks-light);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-info {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .preview-content pre {
+    background: var(--starbucks-light);
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.65;
+    color: var(--ink);
+    border-left: 3px solid var(--starbucks-green);
+  }
+
+  /* ========== Toast ========== */
+  .toast {
+    position: fixed;
+    bottom: calc(85px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--starbucks-dark);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 200;
+    max-width: 90%;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* ========== Footer ========== */
+  .footer {
+    text-align: center;
+    padding: 1.5rem 1rem 1rem;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    margin-top: 1rem;
+  }
+
+  .footer em {
+    font-family: 'Playfair Display', serif;
+    color: var(--starbucks-dark);
+    font-weight: 700;
+  }
+
+  /* ========== Tablet & Desktop ========== */
+  @media (min-width: 640px) {
+    .header {
+      padding: 1.75rem 2rem;
+    }
+
+    h1 { font-size: 1.8rem; }
+
+    .name-input-section {
+      padding: 1.25rem 2rem;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem;
+    }
+
+    .menu-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .menu-item {
+      min-height: 160px;
+      padding: 1.25rem 0.8rem;
+    }
+
+    .menu-icon { font-size: 3rem; }
+    .menu-name { font-size: 0.9rem; }
+
+    .bottom-bar {
+      padding: 1rem 2rem calc(1rem + var(--safe-bottom));
+    }
+
+    .btn-preview, .btn-send {
+      font-size: 1rem;
+    }
+
+    .modal-sheet, .preview-content {
+      margin-bottom: 2rem;
+      border-radius: 16px;
+      max-width: 500px;
+    }
+
+    .modal-overlay, .preview-modal {
+      align-items: center;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .menu-grid { grid-template-columns: repeat(5, 1fr); }
+    .container { max-width: 1100px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-top">
+    <div class="brand-mark">SSU Electrical Eng. Dept. Meeting</div>
+    <div class="counter">
+      <span>☕</span>
+      <span class="num" id="orderCount">0</span>
+      <span>잔</span>
+    </div>
+  </div>
+  <h1>전기공학부 학부회의 <span class="accent">커피주문</span></h1>
+  <div class="header-tagline">학과 회의의 능률과 집중력 향상을 위한 <em>카페인 충전</em></div>
+  <div class="header-date" id="dateLabel"></div>
+</header>
+
+<!-- Name Input -->
+<div class="name-input-section">
+  <div class="name-input-wrap">
+    <input type="text" id="ordererName" class="name-input" placeholder="이름을 입력하세요 (예: 배원규 교수)" autocomplete="off">
+  </div>
+</div>
+
+<!-- Main Container -->
+<div class="container">
+
+  <!-- Menu Section -->
+  <div class="section-title">
+    <span class="num">01</span>
+    <h2>메뉴 선택</h2>
+    <span class="count">TOP 10</span>
+  </div>
+
+  <div class="menu-grid" id="menuGrid"></div>
+
+  <!-- Order List -->
+  <div class="section-title">
+    <span class="num">02</span>
+    <h2>주문 내역</h2>
+    <span class="count" id="orderHint">0잔</span>
+  </div>
+
+  <div class="order-list" id="orderList">
+    <div class="order-empty" id="emptyState">
+      <div class="order-empty-icon">☕</div>
+      <p>메뉴를 선택해 주세요</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <em>SSU Electrical Eng. Dept.</em><br>
+  전기공학부 학부회의 커피주문 시스템
+</footer>
+
+<!-- Bottom Action Bar (Fixed) -->
+<div class="bottom-bar">
+  <button class="btn-preview" id="previewBtn">📋 미리보기</button>
+  <button class="btn-send" id="sendEmailBtn" disabled>✉️ 이슬기 조교에게 메일</button>
+</div>
+
+<!-- Options Modal (Bottom Sheet) -->
+<div class="modal-overlay" id="optionsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalMenuName">—</div>
+    <div class="modal-subtitle">옵션을 선택해 주세요</div>
+
+    <div class="option-group">
+      <label>🌡️ 온도</label>
+      <div class="option-buttons temp" id="tempOptions">
+        <button class="option-btn" data-value="ICE">ICE 아이스</button>
+        <button class="option-btn" data-value="HOT">HOT 핫</button>
+      </div>
+    </div>
+
+    <div class="option-group">
+      <label>☕ 사이즈</label>
+      <div class="option-buttons size" id="sizeOptions">
+        <button class="option-btn" data-value="Tall">Tall</button>
+        <button class="option-btn" data-value="Grande">Grande</button>
+        <button class="option-btn" data-value="Venti">Venti</button>
+      </div>
+    </div>
+
+    <div class="option-group">
+      <label>✏️ 요청사항 (선택)</label>
+      <input type="text" class="option-note" id="customNote" placeholder="예: 시럽 반, 얼음 적게">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="cancelBtn">취소</button>
+      <button class="modal-btn confirm" id="addOrderBtn">주문 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="preview-modal" id="previewModal">
+  <div class="preview-content">
+    <div class="preview-header">
+      <h2>📋 메일 미리보기</h2>
+      <button class="preview-close" id="previewClose">×</button>
+    </div>
+    <div class="preview-info">
+      받는 사람: <strong id="previewTo">—</strong><br>
+      제목: <strong id="previewSubject">—</strong>
+    </div>
+    <pre id="previewBody">—</pre>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">주문이 추가되었습니다</div>
+
+<script>
+  // ============ Configuration ============
+  const ASSISTANT_EMAIL = 'wgbae@ssu.ac.kr';
+  const ASSISTANT_NAME = '이슬기 조교';
+
+  // Starbucks TOP 10 menu
+  const menuData = [
+    { rank: 1,  name: '카페 아메리카노',              icon: '🥤', color: '#3a1f0f', defaultTemp: 'ICE', isNew: false },
+    { rank: 2,  name: '카페 라떼',                    icon: '🥛', color: '#c9a27a', defaultTemp: 'ICE', isNew: false },
+    { rank: 3,  name: '자몽 허니 블랙 티',            icon: '🍹', color: '#e8a534', defaultTemp: 'ICE', isNew: false },
+    { rank: 4,  name: '디카페인 아메리카노',          icon: '🥤', color: '#3a1f0f', defaultTemp: 'ICE', isNew: false },
+    { rank: 5,  name: '바닐라 크림 콜드브루',        icon: '🥤', color: '#4a2c1a', defaultTemp: 'ICE', isNew: false },
+    { rank: 6,  name: '돌체 라떼',                    icon: '🥛', color: '#b8895c', defaultTemp: 'ICE', isNew: false },
+    { rank: 7,  name: '콜드 브루',                    icon: '🥤', color: '#2b1810', defaultTemp: 'ICE', isNew: false },
+    { rank: 8,  name: '클래식 밀크 티',               icon: '🧋', color: '#d4a574', defaultTemp: 'ICE', isNew: true  },
+    { rank: 9,  name: '유자 민트 티',                 icon: '🍵', color: '#c8d96a', defaultTemp: 'ICE', isNew: false },
+    { rank: 10, name: '딸기 딜라이트 블렌디드',      icon: '🍓', color: '#e8a4b0', defaultTemp: 'ICE', isNew: false }
+  ];
+
+  // State
+  let selectedMenu = null;
+  let selectedTemp = null;
+  let selectedSize = null;
+  let orderList = [];
+
+  // ============ Initialization ============
+  function init() {
+    renderMenu();
+    setDateLabel();
+    attachEventListeners();
+    restoreFromSession();
+  }
+
+  function setDateLabel() {
+    const today = new Date();
+    const opts = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    document.getElementById('dateLabel').textContent = today.toLocaleDateString('ko-KR', opts);
+  }
+
+  function saveOrdererName() {
+    try {
+      const name = document.getElementById('ordererName').value.trim();
+      if (name) sessionStorage.setItem('ordererName', name);
+    } catch(e) {}
+  }
+
+  function restoreFromSession() {
+    try {
+      const name = sessionStorage.getItem('ordererName');
+      if (name) document.getElementById('ordererName').value = name;
+    } catch(e) {}
+  }
+
+  // ============ Render ============
+  function renderMenu() {
+    const grid = document.getElementById('menuGrid');
+    grid.innerHTML = menuData.map(item => `
+      <div class="menu-item rank-${item.rank}" data-rank="${item.rank}">
+        <div class="rank-badge">${String(item.rank).padStart(2, '0')}</div>
+        ${item.isNew ? '<span class="menu-tag">NEW</span>' : ''}
+        <div class="menu-icon" style="color: ${item.color}">${item.icon}</div>
+        <div class="menu-name">${item.name}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderOrderList() {
+    const list = document.getElementById('orderList');
+    const hint = document.getElementById('orderHint');
+    const counter = document.getElementById('orderCount');
+    const sendBtn = document.getElementById('sendEmailBtn');
+
+    counter.textContent = orderList.length;
+
+    if (orderList.length === 0) {
+      list.innerHTML = `
+        <div class="order-empty">
+          <div class="order-empty-icon">☕</div>
+          <p>메뉴를 선택해 주세요</p>
+        </div>
+      `;
+      hint.textContent = '0잔';
+      sendBtn.disabled = true;
+      return;
+    }
+
+    hint.textContent = `${orderList.length}잔`;
+    sendBtn.disabled = false;
+
+    const html = orderList.map((order, idx) => `
+      <div class="order-item">
+        <div class="order-num">${String(idx + 1).padStart(2, '0')}</div>
+        <div class="order-details">
+          <strong>${order.menu}</strong>
+          <small>${order.temp} · ${order.size}${order.note ? ' · ' + order.note : ''}</small>
+          <span class="order-person">👤 ${order.person}</span>
+        </div>
+        <button class="delete-btn" data-idx="${idx}" aria-label="삭제">×</button>
+      </div>
+    `).join('');
+
+    list.innerHTML = html;
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteOrder(parseInt(btn.dataset.idx)));
+    });
+  }
+
+  // ============ Event Handlers ============
+  function attachEventListeners() {
+    document.getElementById('ordererName').addEventListener('blur', saveOrdererName);
+
+    document.getElementById('menuGrid').addEventListener('click', e => {
+      const item = e.target.closest('.menu-item');
+      if (!item) return;
+
+      const person = document.getElementById('ordererName').value.trim();
+      if (!person) {
+        showToast('⚠️ 먼저 이름을 입력해 주세요', true);
+        document.getElementById('ordererName').focus();
+        document.getElementById('ordererName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      const rank = parseInt(item.dataset.rank);
+      selectedMenu = menuData.find(m => m.rank === rank);
+
+      selectedTemp = selectedMenu.defaultTemp;
+      selectedSize = 'Tall';
+      document.getElementById('customNote').value = '';
+
+      document.getElementById('modalMenuName').textContent = selectedMenu.name;
+      document.getElementById('optionsModal').classList.add('active');
+      updateOptionButtons();
+      
+      document.body.style.overflow = 'hidden';
+    });
+
+    document.getElementById('tempOptions').addEventListener('click', e => {
+      if (e.target.classList.contains('option-btn')) {
+        selectedTemp = e.target.dataset.value;
+        updateOptionButtons();
+      }
+    });
+
+    document.getElementById('sizeOptions').addEventListener('click', e => {
+      if (e.target.classList.contains('option-btn')) {
+        selectedSize = e.target.dataset.value;
+        updateOptionButtons();
+      }
+    });
+
+    document.getElementById('addOrderBtn').addEventListener('click', addOrder);
+
+    document.getElementById('cancelBtn').addEventListener('click', closeOptionsModal);
+    document.getElementById('optionsModal').addEventListener('click', e => {
+      if (e.target.id === 'optionsModal') closeOptionsModal();
+    });
+
+    document.getElementById('previewBtn').addEventListener('click', showPreview);
+    document.getElementById('previewClose').addEventListener('click', closePreview);
+    document.getElementById('previewModal').addEventListener('click', e => {
+      if (e.target.id === 'previewModal') closePreview();
+    });
+
+    document.getElementById('sendEmailBtn').addEventListener('click', sendEmail);
+  }
+
+  function updateOptionButtons() {
+    document.querySelectorAll('#tempOptions .option-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.value === selectedTemp);
+    });
+    document.querySelectorAll('#sizeOptions .option-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.value === selectedSize);
+    });
+  }
+
+  function closeOptionsModal() {
+    document.getElementById('optionsModal').classList.remove('active');
+    document.body.style.overflow = '';
+    selectedMenu = null;
+  }
+
+  function closePreview() {
+    document.getElementById('previewModal').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function addOrder() {
+    const person = document.getElementById('ordererName').value.trim();
+    if (!person || !selectedMenu || !selectedTemp || !selectedSize) return;
+
+    const note = document.getElementById('customNote').value.trim();
+
+    orderList.push({
+      person: person,
+      menu: selectedMenu.name,
+      temp: selectedTemp,
+      size: selectedSize,
+      note: note
+    });
+
+    renderOrderList();
+    showToast(`✓ ${selectedMenu.name} 추가됨`);
+    closeOptionsModal();
+  }
+
+  function deleteOrder(idx) {
+    if (confirm('이 주문을 삭제하시겠습니까?')) {
+      orderList.splice(idx, 1);
+      renderOrderList();
+    }
+  }
+
+  // ============ Email Generation ============
+  function generateEmailContent() {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    const subject = `[학부회의 커피 주문] ${today.getFullYear()}.${(today.getMonth()+1).toString().padStart(2,'0')}.${today.getDate().toString().padStart(2,'0')} (${today.toLocaleDateString('ko-KR', {weekday:'short'})})`;
+
+    const counts = {};
+    orderList.forEach(o => {
+      const key = `${o.menu} · ${o.temp} · ${o.size}`;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    let body = `안녕하세요 ${ASSISTANT_NAME}님,\n\n`;
+    body += `금일 전기공학부 학부회의 커피 주문 내역 전달 드립니다.\n\n`;
+    body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    body += `📅 일시: ${dateStr}\n`;
+    body += `☕ 총 주문: ${orderList.length}잔 (${new Set(orderList.map(o => o.person)).size}명)\n`;
+    body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    body += `【 주문자별 상세 내역 】\n\n`;
+    orderList.forEach((o, i) => {
+      body += `${String(i+1).padStart(2,'0')}. ${o.person}\n`;
+      body += `    → ${o.menu} / ${o.temp} / ${o.size}\n`;
+      if (o.note) body += `    → 요청사항: ${o.note}\n`;
+      body += `\n`;
+    });
+
+    body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    body += `【 스타벅스 주문용 집계 】\n\n`;
+    Object.entries(counts).forEach(([key, cnt]) => {
+      body += `• ${key} × ${cnt}잔\n`;
+    });
+    body += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    body += `항상 수고 많으십니다. 감사합니다.\n\n`;
+    body += `SSU Electrical Eng.\n`;
+    body += `학부회의 커피 주문 시스템`;
+
+    return { subject, body };
+  }
+
+  function showPreview() {
+    if (orderList.length === 0) {
+      showToast('⚠️ 먼저 주문을 추가해 주세요', true);
+      return;
+    }
+    const { subject, body } = generateEmailContent();
+    document.getElementById('previewTo').textContent = `${ASSISTANT_NAME} <${ASSISTANT_EMAIL}>`;
+    document.getElementById('previewSubject').textContent = subject;
+    document.getElementById('previewBody').textContent = body;
+    document.getElementById('previewModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function sendEmail() {
+    if (orderList.length === 0) return;
+    const { subject, body } = generateEmailContent();
+    const mailto = `mailto:${ASSISTANT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  }
+
+  // ============ Utilities ============
+  function showToast(msg, isError = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.background = isError ? 'var(--danger)' : 'var(--starbucks-dark)';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  init();
+</script>
+
+</body>
+</html>
