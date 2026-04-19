@@ -204,6 +204,58 @@
     border: 1px solid var(--line);
   }
 
+  /* Order section title with date chip + reset button */
+  .order-section-title {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .order-section-title .count {
+    margin-left: 0;
+  }
+
+  .order-date-chip {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--starbucks-dark);
+    background: var(--starbucks-cream);
+    padding: 0.25rem 0.65rem;
+    border-radius: 12px;
+    border: 1px solid var(--starbucks-green);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .reset-btn {
+    font-size: 0.72rem;
+    color: var(--danger);
+    background: white;
+    padding: 0.3rem 0.65rem;
+    border-radius: 12px;
+    border: 1px solid var(--danger);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    min-height: 28px;
+  }
+
+  .reset-btn:active {
+    background: var(--danger);
+    color: white;
+    transform: scale(0.96);
+  }
+
+  .reset-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: var(--line);
+    color: var(--ink-soft);
+  }
+
   /* ========== Menu Grid ========== */
   .menu-grid {
     display: grid;
@@ -667,6 +719,56 @@
     border-left: 3px solid var(--starbucks-green);
   }
 
+  /* ========== Connection Status ========== */
+  .connection-status {
+    position: fixed;
+    top: calc(0.5rem + var(--safe-top));
+    right: 0.75rem;
+    background: rgba(255,255,255,0.95);
+    color: var(--ink-soft);
+    padding: 0.3rem 0.65rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+  }
+
+  .connection-status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #aaa;
+    display: inline-block;
+  }
+
+  .connection-status.connecting .dot {
+    background: #f39c12;
+    animation: pulse 1.5s infinite;
+  }
+
+  .connection-status.connected .dot {
+    background: #27ae60;
+  }
+
+  .connection-status.offline {
+    background: rgba(192, 57, 43, 0.95);
+    color: white;
+  }
+
+  .connection-status.offline .dot {
+    background: white;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
   /* ========== Toast ========== */
   .toast {
     position: fixed;
@@ -801,10 +903,12 @@
   <div class="menu-grid" id="menuGrid"></div>
 
   <!-- Order List -->
-  <div class="section-title">
+  <div class="section-title order-section-title">
     <span class="num">02</span>
     <h2>주문 내역</h2>
+    <span class="order-date-chip" id="orderDateChip">—</span>
     <span class="count" id="orderHint">0잔</span>
+    <button class="reset-btn" id="resetBtn" aria-label="전체 주문 초기화">🗑️ 초기화</button>
   </div>
 
   <div class="order-list" id="orderList">
@@ -882,12 +986,53 @@
 <!-- Toast -->
 <div class="toast" id="toast">주문이 추가되었습니다</div>
 
-<script>
-  // ============ Configuration ============
+<!-- Connection Status Indicator -->
+<div class="connection-status" id="connectionStatus">
+  <span class="dot"></span>
+  <span class="text">연결 중...</span>
+</div>
+
+<script type="module">
+  // ============ Firebase Configuration ============
+  // SSU Electrical Eng. - Coffee Order Project
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiplueyqN1d2bxm2swdfdzgDDnIyvlPhU",
+    authDomain: "ssu-ee-coffee.firebaseapp.com",
+    databaseURL: "https://ssu-ee-coffee-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ssu-ee-coffee",
+    storageBucket: "ssu-ee-coffee.firebasestorage.app",
+    messagingSenderId: "111668112163",
+    appId: "1:111668112163:web:46bd3d14dd7f19492fba96",
+    measurementId: "G-2QK742L0PT"
+  };
+
+  // ============ App Configuration ============
   const ASSISTANT_EMAIL = 'wgbae@ssu.ac.kr';
   const ASSISTANT_NAME = '이슬기 조교';
 
-  // Starbucks TOP 10 menu
+  // ============ Firebase Imports (CDN) ============
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getDatabase, ref, push, onValue, remove, set, serverTimestamp, off
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // ============ Firebase Initialization ============
+  let app, db, ordersRef;
+  let isFirebaseReady = false;
+
+  const isConfigured = !firebaseConfig.apiKey.includes('YOUR_');
+
+  if (isConfigured) {
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+      isFirebaseReady = true;
+    } catch (e) {
+      console.error('Firebase init failed:', e);
+    }
+  }
+
+  // ============ Starbucks TOP 10 Menu ============
   const menuData = [
     { rank: 1,  name: '카페 아메리카노',              icon: '🥤', color: '#3a1f0f', defaultTemp: 'ICE', isNew: false },
     { rank: 2,  name: '카페 라떼',                    icon: '🥛', color: '#c9a27a', defaultTemp: 'ICE', isNew: false },
@@ -901,41 +1046,141 @@
     { rank: 10, name: '딸기 딜라이트 블렌디드',      icon: '🍓', color: '#e8a4b0', defaultTemp: 'ICE', isNew: false }
   ];
 
-  // State
+  // ============ State ============
   let selectedMenu = null;
   let selectedTemp = null;
   let selectedSize = null;
-  let orderList = [];
+  let orderList = [];  // Array of {id, person, menu, temp, size, note, timestamp}
+  const NAME_KEY = 'ssu-coffee-orderer';
 
-  // ============ Initialization ============
-  function init() {
-    renderMenu();
-    setDateLabel();
-    attachEventListeners();
-    restoreFromSession();
+  // ============ Date Helpers ============
+  function getTodayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
-  function setDateLabel() {
-    const today = new Date();
+  function getTodayDisplay() {
     const opts = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    document.getElementById('dateLabel').textContent = today.toLocaleDateString('ko-KR', opts);
+    return new Date().toLocaleDateString('ko-KR', opts);
   }
 
+  // ============ Connection Status ============
+  function setConnectionStatus(state, msg) {
+    const el = document.getElementById('connectionStatus');
+    if (!el) return;
+    el.className = 'connection-status ' + state;
+    el.querySelector('.text').textContent = msg;
+  }
+
+  // ============ Firebase Data Layer ============
+  function subscribeToOrders() {
+    if (!isFirebaseReady) {
+      setConnectionStatus('offline', '⚠️ Firebase 미설정');
+      showToast('⚠️ Firebase 설정이 필요합니다. FIREBASE_SETUP.md 확인', true);
+      return;
+    }
+
+    const todayKey = getTodayKey();
+    ordersRef = ref(db, `orders/${todayKey}`);
+
+    setConnectionStatus('connecting', '연결 중...');
+
+    onValue(ordersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      // Firebase returns object { id: {...}, id: {...} } -> convert to sorted array
+      orderList = Object.entries(data).map(([id, order]) => ({
+        id,
+        ...order
+      })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+      setConnectionStatus('connected', '실시간 연결됨');
+      renderOrderList();
+    }, (error) => {
+      console.error('Firebase read error:', error);
+      setConnectionStatus('offline', '연결 오류');
+      showToast('⚠️ 데이터베이스 연결 실패', true);
+    });
+  }
+
+  async function addOrderToFirebase(order) {
+    if (!isFirebaseReady) {
+      showToast('⚠️ Firebase 미설정 - 저장 불가', true);
+      return false;
+    }
+    try {
+      const todayKey = getTodayKey();
+      const listRef = ref(db, `orders/${todayKey}`);
+      await push(listRef, order);
+      return true;
+    } catch (e) {
+      console.error('Add order failed:', e);
+      showToast('⚠️ 주문 저장 실패', true);
+      return false;
+    }
+  }
+
+  async function deleteOrderFromFirebase(orderId) {
+    if (!isFirebaseReady) return false;
+    try {
+      const todayKey = getTodayKey();
+      const itemRef = ref(db, `orders/${todayKey}/${orderId}`);
+      await remove(itemRef);
+      return true;
+    } catch (e) {
+      console.error('Delete order failed:', e);
+      showToast('⚠️ 주문 삭제 실패', true);
+      return false;
+    }
+  }
+
+  async function clearAllOrdersFromFirebase() {
+    if (!isFirebaseReady) return false;
+    try {
+      const todayKey = getTodayKey();
+      const dayRef = ref(db, `orders/${todayKey}`);
+      await remove(dayRef);
+      return true;
+    } catch (e) {
+      console.error('Clear orders failed:', e);
+      showToast('⚠️ 초기화 실패', true);
+      return false;
+    }
+  }
+
+  // ============ Online/Offline Detection ============
+  window.addEventListener('online', () => {
+    if (isFirebaseReady) setConnectionStatus('connecting', '재연결 중...');
+  });
+  window.addEventListener('offline', () => {
+    setConnectionStatus('offline', '오프라인');
+  });
+
+  // ============ Orderer Name (Local) ============
   function saveOrdererName() {
     try {
       const name = document.getElementById('ordererName').value.trim();
-      if (name) sessionStorage.setItem('ordererName', name);
+      if (name) localStorage.setItem(NAME_KEY, name);
     } catch(e) {}
   }
 
-  function restoreFromSession() {
+  function restoreOrdererName() {
     try {
-      const name = sessionStorage.getItem('ordererName');
+      const name = localStorage.getItem(NAME_KEY);
       if (name) document.getElementById('ordererName').value = name;
     } catch(e) {}
   }
 
   // ============ Render ============
+  function setDateLabel() {
+    const dateStr = getTodayDisplay();
+    document.getElementById('dateLabel').textContent = `오늘날짜: ${dateStr}`;
+    const chip = document.getElementById('orderDateChip');
+    if (chip) chip.textContent = dateStr;
+  }
+
   function renderMenu() {
     const grid = document.getElementById('menuGrid');
     grid.innerHTML = menuData.map(item => `
@@ -953,6 +1198,7 @@
     const hint = document.getElementById('orderHint');
     const counter = document.getElementById('orderCount');
     const sendBtn = document.getElementById('sendEmailBtn');
+    const resetBtn = document.getElementById('resetBtn');
 
     counter.textContent = orderList.length;
 
@@ -965,98 +1211,101 @@
       `;
       hint.textContent = '0잔';
       sendBtn.disabled = true;
+      if (resetBtn) resetBtn.disabled = true;
       return;
     }
 
     hint.textContent = `${orderList.length}잔`;
     sendBtn.disabled = false;
+    if (resetBtn) resetBtn.disabled = false;
 
     const html = orderList.map((order, idx) => `
       <div class="order-item">
         <div class="order-num">${String(idx + 1).padStart(2, '0')}</div>
         <div class="order-details">
-          <strong>${order.menu}</strong>
-          <small>${order.temp} · ${order.size}${order.note ? ' · ' + order.note : ''}</small>
-          <span class="order-person">👤 ${order.person}</span>
+          <strong>${escapeHtml(order.menu)}</strong>
+          <small>${escapeHtml(order.temp)} · ${escapeHtml(order.size)}${order.note ? ' · ' + escapeHtml(order.note) : ''}</small>
+          <span class="order-person">👤 ${escapeHtml(order.person)}</span>
         </div>
-        <button class="delete-btn" data-idx="${idx}" aria-label="삭제">×</button>
+        <button class="delete-btn" data-id="${order.id}" aria-label="삭제">×</button>
       </div>
     `).join('');
 
     list.innerHTML = html;
 
     document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', () => deleteOrder(parseInt(btn.dataset.idx)));
+      btn.addEventListener('click', () => deleteOrder(btn.dataset.id));
     });
   }
 
-  // ============ Event Handlers ============
-  function attachEventListeners() {
-    document.getElementById('ordererName').addEventListener('blur', saveOrdererName);
-
-    document.getElementById('menuGrid').addEventListener('click', e => {
-      const item = e.target.closest('.menu-item');
-      if (!item) return;
-
-      const person = document.getElementById('ordererName').value.trim();
-      if (!person) {
-        showToast('⚠️ 먼저 이름을 입력해 주세요', true);
-        document.getElementById('ordererName').focus();
-        document.getElementById('ordererName').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-
-      const rank = parseInt(item.dataset.rank);
-      selectedMenu = menuData.find(m => m.rank === rank);
-
-      selectedTemp = selectedMenu.defaultTemp;
-      selectedSize = 'Tall';
-      document.getElementById('customNote').value = '';
-
-      document.getElementById('modalMenuName').textContent = selectedMenu.name;
-      document.getElementById('optionsModal').classList.add('active');
-      updateOptionButtons();
-      
-      document.body.style.overflow = 'hidden';
-    });
-
-    document.getElementById('tempOptions').addEventListener('click', e => {
-      if (e.target.classList.contains('option-btn')) {
-        selectedTemp = e.target.dataset.value;
-        updateOptionButtons();
-      }
-    });
-
-    document.getElementById('sizeOptions').addEventListener('click', e => {
-      if (e.target.classList.contains('option-btn')) {
-        selectedSize = e.target.dataset.value;
-        updateOptionButtons();
-      }
-    });
-
-    document.getElementById('addOrderBtn').addEventListener('click', addOrder);
-
-    document.getElementById('cancelBtn').addEventListener('click', closeOptionsModal);
-    document.getElementById('optionsModal').addEventListener('click', e => {
-      if (e.target.id === 'optionsModal') closeOptionsModal();
-    });
-
-    document.getElementById('previewBtn').addEventListener('click', showPreview);
-    document.getElementById('previewClose').addEventListener('click', closePreview);
-    document.getElementById('previewModal').addEventListener('click', e => {
-      if (e.target.id === 'previewModal') closePreview();
-    });
-
-    document.getElementById('sendEmailBtn').addEventListener('click', sendEmail);
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
-  function updateOptionButtons() {
-    document.querySelectorAll('#tempOptions .option-btn').forEach(btn => {
-      btn.classList.toggle('selected', btn.dataset.value === selectedTemp);
-    });
-    document.querySelectorAll('#sizeOptions .option-btn').forEach(btn => {
-      btn.classList.toggle('selected', btn.dataset.value === selectedSize);
-    });
+  // ============ Order Actions ============
+  async function addOrder() {
+    const person = document.getElementById('ordererName').value.trim();
+    if (!person || !selectedMenu || !selectedTemp || !selectedSize) return;
+
+    const note = document.getElementById('customNote').value.trim();
+
+    const order = {
+      person: person,
+      menu: selectedMenu.name,
+      temp: selectedTemp,
+      size: selectedSize,
+      note: note,
+      timestamp: Date.now()
+    };
+
+    const ok = await addOrderToFirebase(order);
+    if (ok) {
+      showToast(`✓ ${selectedMenu.name} 추가됨`);
+      closeOptionsModal();
+      // No need to manually update orderList - Firebase onValue will trigger re-render
+    }
+  }
+
+  async function deleteOrder(orderId) {
+    if (!confirm('이 주문을 삭제하시겠습니까?')) return;
+    await deleteOrderFromFirebase(orderId);
+    // onValue listener will auto re-render
+  }
+
+  async function resetAllOrders() {
+    if (orderList.length === 0) return;
+    const msg = `오늘 전체 주문 내역 ${orderList.length}건을 모두 삭제하시겠습니까?\n\n⚠️ 모든 사용자의 주문이 삭제됩니다. 복구할 수 없습니다.`;
+    if (!confirm(msg)) return;
+    const ok = await clearAllOrdersFromFirebase();
+    if (ok) showToast('주문 내역이 초기화되었습니다');
+  }
+
+  // ============ Modal Handlers ============
+  function openOptionsModal(rank) {
+    const person = document.getElementById('ordererName').value.trim();
+    if (!person) {
+      showToast('⚠️ 먼저 이름을 입력해 주세요', true);
+      const nameInput = document.getElementById('ordererName');
+      nameInput.focus();
+      nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    selectedMenu = menuData.find(m => m.rank === rank);
+    selectedTemp = selectedMenu.defaultTemp;
+    selectedSize = 'Tall';
+    document.getElementById('customNote').value = '';
+
+    document.getElementById('modalMenuName').textContent = selectedMenu.name;
+    document.getElementById('optionsModal').classList.add('active');
+    updateOptionButtons();
+    document.body.style.overflow = 'hidden';
   }
 
   function closeOptionsModal() {
@@ -1070,36 +1319,19 @@
     document.body.style.overflow = '';
   }
 
-  function addOrder() {
-    const person = document.getElementById('ordererName').value.trim();
-    if (!person || !selectedMenu || !selectedTemp || !selectedSize) return;
-
-    const note = document.getElementById('customNote').value.trim();
-
-    orderList.push({
-      person: person,
-      menu: selectedMenu.name,
-      temp: selectedTemp,
-      size: selectedSize,
-      note: note
+  function updateOptionButtons() {
+    document.querySelectorAll('#tempOptions .option-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.value === selectedTemp);
     });
-
-    renderOrderList();
-    showToast(`✓ ${selectedMenu.name} 추가됨`);
-    closeOptionsModal();
-  }
-
-  function deleteOrder(idx) {
-    if (confirm('이 주문을 삭제하시겠습니까?')) {
-      orderList.splice(idx, 1);
-      renderOrderList();
-    }
+    document.querySelectorAll('#sizeOptions .option-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.value === selectedSize);
+    });
   }
 
   // ============ Email Generation ============
   function generateEmailContent() {
     const today = new Date();
-    const dateStr = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    const dateStr = getTodayDisplay();
     const subject = `[학부회의 커피 주문] ${today.getFullYear()}.${(today.getMonth()+1).toString().padStart(2,'0')}.${today.getDate().toString().padStart(2,'0')} (${today.toLocaleDateString('ko-KR', {weekday:'short'})})`;
 
     const counts = {};
@@ -1162,11 +1394,75 @@
     toast.textContent = msg;
     toast.style.background = isError ? 'var(--danger)' : 'var(--starbucks-dark)';
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // ============ Event Listeners ============
+  function attachEventListeners() {
+    document.getElementById('ordererName').addEventListener('blur', saveOrdererName);
+
+    document.getElementById('menuGrid').addEventListener('click', e => {
+      const item = e.target.closest('.menu-item');
+      if (!item) return;
+      openOptionsModal(parseInt(item.dataset.rank));
+    });
+
+    document.getElementById('tempOptions').addEventListener('click', e => {
+      if (e.target.classList.contains('option-btn')) {
+        selectedTemp = e.target.dataset.value;
+        updateOptionButtons();
+      }
+    });
+
+    document.getElementById('sizeOptions').addEventListener('click', e => {
+      if (e.target.classList.contains('option-btn')) {
+        selectedSize = e.target.dataset.value;
+        updateOptionButtons();
+      }
+    });
+
+    document.getElementById('addOrderBtn').addEventListener('click', addOrder);
+    document.getElementById('cancelBtn').addEventListener('click', closeOptionsModal);
+    document.getElementById('optionsModal').addEventListener('click', e => {
+      if (e.target.id === 'optionsModal') closeOptionsModal();
+    });
+
+    document.getElementById('previewBtn').addEventListener('click', showPreview);
+    document.getElementById('previewClose').addEventListener('click', closePreview);
+    document.getElementById('previewModal').addEventListener('click', e => {
+      if (e.target.id === 'previewModal') closePreview();
+    });
+
+    document.getElementById('sendEmailBtn').addEventListener('click', sendEmail);
+    document.getElementById('resetBtn').addEventListener('click', resetAllOrders);
+  }
+
+  // ============ Midnight Rollover ============
+  // Re-subscribe to today's key if date changes while page is open
+  let currentDateKey = getTodayKey();
+  setInterval(() => {
+    const newDateKey = getTodayKey();
+    if (newDateKey !== currentDateKey) {
+      currentDateKey = newDateKey;
+      setDateLabel();
+      if (ordersRef) off(ordersRef);
+      subscribeToOrders();
+    }
+  }, 60000); // Check every minute
+
+  // ============ Init ============
+  function init() {
+    renderMenu();
+    setDateLabel();
+    attachEventListeners();
+    restoreOrdererName();
+    subscribeToOrders();  // Start Firebase real-time listener
   }
 
   init();
 </script>
+
+
 
 </body>
 </html>
