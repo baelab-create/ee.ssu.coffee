@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1e3932">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -502,6 +502,15 @@
     border-radius: 12px;
     margin-top: 0.25rem;
     display: inline-block;
+  }
+
+  .order-time {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    margin-left: 0.4rem;
+    font-weight: 500;
   }
 
   .delete-btn {
@@ -1076,6 +1085,12 @@
 <div class="toast" id="toast">주문이 추가되었습니다</div>
 
 <script type="module">
+  // ============ Firebase Imports (must be at the very top of ES module) ============
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import {
+    getDatabase, ref, push, onValue, remove, set, serverTimestamp, off
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
   // ============ Firebase Configuration ============
   // SSU Electrical Eng. - Coffee Order Project
   const firebaseConfig = {
@@ -1093,12 +1108,6 @@
   const ASSISTANT_EMAIL = 'wgbae@ssu.ac.kr';
   const ASSISTANT_NAME = '이슬기 조교';
 
-  // ============ Firebase Imports (CDN) ============
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import {
-    getDatabase, ref, push, onValue, remove, set, serverTimestamp, off
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
   // ============ Firebase Initialization ============
   let app, db, ordersRef;
   let isFirebaseReady = false;
@@ -1115,16 +1124,17 @@
     }
   }
 
-  // ============ Starbucks TOP 10 Menu ============
+  // ============ Starbucks Korea Menu (2025 판매량 반영) ============
+  // 2025년 트렌드: 디카페인 아메리카노가 자몽허니블랙티를 제치고 3위로 상승
   const menuData = [
     { rank: 1,  name: '카페 아메리카노',              icon: '🥤', color: '#3a1f0f', defaultTemp: 'ICE', isNew: false },
     { rank: 2,  name: '카페 라떼',                    icon: '🥛', color: '#c9a27a', defaultTemp: 'ICE', isNew: false },
-    { rank: 3,  name: '자몽 허니 블랙 티',            icon: '🍹', color: '#e8a534', defaultTemp: 'ICE', isNew: false },
-    { rank: 4,  name: '디카페인 아메리카노',          icon: '🥤', color: '#3a1f0f', defaultTemp: 'ICE', isNew: false },
+    { rank: 3,  name: '디카페인 아메리카노',          icon: '🥤', color: '#5a3a2f', defaultTemp: 'ICE', isNew: false },
+    { rank: 4,  name: '자몽 허니 블랙 티',            icon: '🍹', color: '#e8a534', defaultTemp: 'ICE', isNew: false },
     { rank: 5,  name: '바닐라 크림 콜드브루',        icon: '🥤', color: '#4a2c1a', defaultTemp: 'ICE', isNew: false },
     { rank: 6,  name: '돌체 라떼',                    icon: '🥛', color: '#b8895c', defaultTemp: 'ICE', isNew: false },
     { rank: 7,  name: '콜드 브루',                    icon: '🥤', color: '#2b1810', defaultTemp: 'ICE', isNew: false },
-    { rank: 8,  name: '클래식 밀크 티',               icon: '🧋', color: '#d4a574', defaultTemp: 'ICE', isNew: true  },
+    { rank: 8,  name: '클래식 밀크 티',               icon: '🧋', color: '#d4a574', defaultTemp: 'ICE', isNew: false },
     { rank: 9,  name: '유자 민트 티',                 icon: '🍵', color: '#c8d96a', defaultTemp: 'ICE', isNew: false },
     { rank: 10, name: '딸기 딜라이트 블렌디드',      icon: '🍓', color: '#e8a4b0', defaultTemp: 'ICE', isNew: false }
   ];
@@ -1134,20 +1144,64 @@
   let selectedTemp = null;
   let selectedSize = null;
   let orderList = [];  // Array of {id, person, menu, temp, size, note, timestamp}
+  let currentDateKey = '';  // Set in init() after DOM ready
   const NAME_KEY = 'ssu-coffee-orderer';
 
   // ============ Date Helpers ============
-  function getTodayKey() {
-    const d = new Date();
+  // 회의 스케줄: 매주 수요일 16:30 (커피는 회의 1시간 전 15:30에 발송)
+  const MEETING_WEEKDAY = 3;      // 0=일, 1=월, 2=화, 3=수, 4=목, 5=금, 6=토 (Date.getDay 기준)
+  const MEETING_HOUR = 16;
+  const MEETING_MINUTE = 30;
+
+  // "회의일 키"를 반환: 화요일 저녁부터 자정을 넘어 수요일 회의 시작 전까지 동일한 키 유지
+  // → 자정 리셋으로 인한 데이터 유실 방지
+  function getMeetingDayKey() {
+    return formatDateKey(getMeetingDate(new Date()));
+  }
+
+  function getMeetingDate(now) {
+    const weekday = now.getDay();
+    if (weekday === MEETING_WEEKDAY) {
+      // 오늘이 수요일: 회의 시각(16:30) 이전이면 오늘, 이후면 다음 주 수요일
+      const meetingTime = new Date(now);
+      meetingTime.setHours(MEETING_HOUR, MEETING_MINUTE, 0, 0);
+      if (now < meetingTime) {
+        return now;
+      } else {
+        const next = new Date(now);
+        next.setDate(next.getDate() + 7);
+        return next;
+      }
+    }
+    // 다른 요일: 다음 수요일로
+    let daysUntil = (MEETING_WEEKDAY - weekday + 7) % 7;
+    if (daysUntil === 0) daysUntil = 7;
+    const target = new Date(now);
+    target.setDate(target.getDate() + daysUntil);
+    return target;
+  }
+
+  function formatDateKey(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   }
 
+  // Backward compatibility alias
+  function getTodayKey() {
+    return getMeetingDayKey();
+  }
+
   function getTodayDisplay() {
     const opts = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
     return new Date().toLocaleDateString('ko-KR', opts);
+  }
+
+  // 회의일 표시용 (예: "2026년 4월 22일 수요일")
+  function getMeetingDayDisplay() {
+    const opts = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    return getMeetingDate(new Date()).toLocaleDateString('ko-KR', opts);
   }
 
   // ============ Connection Status ============
@@ -1233,12 +1287,33 @@
     }
   }
 
-  // ============ Online/Offline Detection ============
+  // ============ Online/Offline Detection & Auto-Recovery ============
   window.addEventListener('online', () => {
-    if (isFirebaseReady) setConnectionStatus('connecting', '재연결 중...');
+    if (isFirebaseReady) {
+      setConnectionStatus('connecting', '재연결 중...');
+      // Detach and reattach listener to force fresh subscription
+      if (ordersRef) {
+        try { off(ordersRef); } catch(e) {}
+      }
+      subscribeToOrders();
+    }
   });
   window.addEventListener('offline', () => {
     setConnectionStatus('offline', '오프라인');
+  });
+
+  // Recover when tab is refocused (mobile browsers often suspend background tabs)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isFirebaseReady && navigator.onLine) {
+      // Verify current subscription is still active by re-checking the date key
+      const nowKey = getTodayKey();
+      if (nowKey !== currentDateKey) {
+        currentDateKey = nowKey;
+        setDateLabel();
+        if (ordersRef) { try { off(ordersRef); } catch(e) {} }
+        subscribeToOrders();
+      }
+    }
   });
 
   // ============ Orderer Name (Local) ============
@@ -1258,10 +1333,20 @@
 
   // ============ Render ============
   function setDateLabel() {
-    const dateStr = getTodayDisplay();
-    document.getElementById('dateLabel').textContent = `오늘날짜: ${dateStr}`;
+    const todayStr = getTodayDisplay();
+    const meetingStr = getMeetingDayDisplay();
+    const isMeetingToday = todayStr === meetingStr;
+
+    const label = document.getElementById('dateLabel');
+    if (isMeetingToday) {
+      label.innerHTML = `오늘날짜: ${todayStr} <span style="color:var(--starbucks-accent);font-weight:600">· 회의 당일</span>`;
+    } else {
+      label.innerHTML = `오늘: ${todayStr}<br><span style="color:var(--starbucks-accent);font-weight:600">📅 회의일: ${meetingStr}</span>`;
+    }
+
+    // 주문 내역 옆의 날짜 칩은 항상 "회의일" 기준으로 표시
     const chip = document.getElementById('orderDateChip');
-    if (chip) chip.textContent = dateStr;
+    if (chip) chip.textContent = meetingStr;
   }
 
   function renderMenu() {
@@ -1302,17 +1387,24 @@
     sendBtn.disabled = false;
     if (resetBtn) resetBtn.disabled = false;
 
-    const html = orderList.map((order, idx) => `
+    const html = orderList.map((order, idx) => {
+      let timeStr = '';
+      if (order.timestamp) {
+        const t = new Date(order.timestamp);
+        timeStr = `<span class="order-time">${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}</span>`;
+      }
+      return `
       <div class="order-item">
         <div class="order-num">${String(idx + 1).padStart(2, '0')}</div>
         <div class="order-details">
           <strong>${escapeHtml(order.menu)}</strong>
           <small>${escapeHtml(order.temp)} · ${escapeHtml(order.size)}${order.note ? ' · ' + escapeHtml(order.note) : ''}</small>
-          <span class="order-person">👤 ${escapeHtml(order.person)}</span>
+          <span class="order-person">👤 ${escapeHtml(order.person)}${timeStr}</span>
         </div>
         <button class="delete-btn" data-id="${order.id}" aria-label="삭제">×</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     list.innerHTML = html;
 
@@ -1414,8 +1506,9 @@
   // ============ Email Generation ============
   function generateEmailContent() {
     const today = new Date();
-    const dateStr = getTodayDisplay();
-    const subject = `[학부회의 커피 주문] ${today.getFullYear()}.${(today.getMonth()+1).toString().padStart(2,'0')}.${today.getDate().toString().padStart(2,'0')} (${today.toLocaleDateString('ko-KR', {weekday:'short'})})`;
+    const meetingDate = getMeetingDate(today);
+    const meetingDateStr = getMeetingDayDisplay();
+    const subject = `[학부회의 커피 주문] ${meetingDate.getFullYear()}.${(meetingDate.getMonth()+1).toString().padStart(2,'0')}.${meetingDate.getDate().toString().padStart(2,'0')} (${meetingDate.toLocaleDateString('ko-KR', {weekday:'short'})}) 학부회의`;
 
     const counts = {};
     orderList.forEach(o => {
@@ -1424,25 +1517,35 @@
     });
 
     let body = `안녕하세요 ${ASSISTANT_NAME}님,\n\n`;
-    body += `금일 전기공학부 학부회의 커피 주문 내역 전달 드립니다.\n\n`;
+    body += `전기공학부 학부회의 커피 주문 내역 전달 드립니다.\n\n`;
     body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    body += `📅 일시: ${dateStr}\n`;
+    body += `📅 회의일: ${meetingDateStr}\n`;
+    body += `⏰ 회의 시각: 오후 4시 30분\n`;
     body += `☕ 총 주문: ${orderList.length}잔 (${new Set(orderList.map(o => o.person)).size}명)\n`;
     body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-    body += `【 주문자별 상세 내역 】\n\n`;
+    body += `【 주문자별 상세 내역 】\n(주문 시각 순)\n\n`;
     orderList.forEach((o, i) => {
-      body += `${String(i+1).padStart(2,'0')}. ${o.person}\n`;
+      let timeStr = '';
+      if (o.timestamp) {
+        const t = new Date(o.timestamp);
+        timeStr = ` [${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}]`;
+      }
+      body += `${String(i+1).padStart(2,'0')}. ${o.person}${timeStr}\n`;
       body += `    → ${o.menu} / ${o.temp} / ${o.size}\n`;
       if (o.note) body += `    → 요청사항: ${o.note}\n`;
       body += `\n`;
     });
 
     body += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    body += `【 스타벅스 주문용 집계 】\n\n`;
-    Object.entries(counts).forEach(([key, cnt]) => {
-      body += `• ${key} × ${cnt}잔\n`;
-    });
+    body += `【 스타벅스 주문용 집계 】\n`;
+    body += `(수량 많은 순 — 바리스타 전달용)\n\n`;
+    // Sort by count desc, then by name
+    Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .forEach(([key, cnt]) => {
+        body += `• ${key} × ${cnt}잔\n`;
+      });
     body += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     body += `항상 수고 많으십니다. 감사합니다.\n\n`;
     body += `SSU Electrical Eng.\n`;
@@ -1520,29 +1623,43 @@
     document.getElementById('resetBtn').addEventListener('click', resetAllOrders);
   }
 
-  // ============ Midnight Rollover ============
-  // Re-subscribe to today's key if date changes while page is open
-  let currentDateKey = getTodayKey();
+  // ============ Meeting Day Rollover ============
+  // 회의일 키가 바뀌면 자동으로 새 창구로 전환 (수요일 16:30 회의 시작 직후)
+  // 화요일 저녁~수요일 회의 전까지는 같은 키 유지 → 자정 리셋 문제 없음
   setInterval(() => {
     const newDateKey = getTodayKey();
     if (newDateKey !== currentDateKey) {
       currentDateKey = newDateKey;
       setDateLabel();
-      if (ordersRef) off(ordersRef);
+      if (ordersRef) { try { off(ordersRef); } catch(e) {} }
       subscribeToOrders();
+      showToast('📅 다음 회의일 주문 창구로 전환되었습니다');
     }
-  }, 60000); // Check every minute
+  }, 60000); // 매 1분마다 체크
 
   // ============ Init ============
   function init() {
-    renderMenu();
-    setDateLabel();
-    attachEventListeners();
-    restoreOrdererName();
-    subscribeToOrders();  // Start Firebase real-time listener
+    try {
+      currentDateKey = getTodayKey();
+      renderMenu();
+      setDateLabel();
+      attachEventListeners();
+      restoreOrdererName();
+      subscribeToOrders();  // Start Firebase real-time listener
+    } catch (e) {
+      console.error('Init error:', e);
+      // 초기화 실패해도 최소한 메뉴는 표시 시도
+      try { renderMenu(); } catch(_) {}
+      showToast('⚠️ 일부 기능 초기화에 실패했습니다', true);
+    }
   }
 
-  init();
+  // DOM이 준비되지 않은 상태에서 실행되면 안전하게 대기
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 </script>
 
 
