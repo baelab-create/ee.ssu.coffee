@@ -315,6 +315,86 @@
   .name-input:focus { outline: none; box-shadow: var(--press), 0 0 0 1px var(--red-line); }
   .name-input::placeholder { color: var(--ink-muted); font-weight: 400; }
 
+
+  /* ========== Name Toggle Switches (주문자 선택) ========== */
+  .name-section-title { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 1rem; }
+  .name-section-title .num { font-family: 'Montserrat', sans-serif; font-weight: 600; color: var(--red); font-size: 0.85rem; letter-spacing: 0.1em; }
+  .name-section-title h2 { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.2rem; color: var(--starbucks-dark); }
+  .name-selected {
+    margin-left: auto;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    background: var(--base);
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    box-shadow: var(--press-sm);
+    white-space: nowrap;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .name-selected.active { color: #fff; background: var(--red-grad); box-shadow: 4px 4px 10px rgba(255,77,77,0.3), -4px -4px 10px var(--sh-light); }
+
+  .name-toggle-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+
+  .name-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 54px;
+    padding: 0.55rem 0.7rem 0.55rem 0.95rem;
+    border: none;
+    border-radius: 16px;
+    background: var(--base);
+    box-shadow: var(--raise-sm);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-align: left;
+    transition: box-shadow 0.2s var(--ease), color 0.2s;
+  }
+  .name-toggle:active { box-shadow: var(--press-sm); }
+  .name-toggle:focus-visible { outline: 2px solid var(--red-line); outline-offset: 2px; }
+  .name-toggle-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name-toggle[aria-checked="true"] { color: var(--red-deep); font-weight: 700; }
+  .name-toggle.custom { grid-column: 1 / -1; }
+
+  /* 스위치: 함몰된 트랙 + 돌출된 손잡이, 켜지면 레드 */
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 46px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--base);
+    box-shadow: var(--press-sm);
+    transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  }
+  .switch .knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--base);
+    box-shadow: 2px 2px 5px #c4c4c4, -2px -2px 5px #ffffff;
+    transition: transform 0.25s var(--ease), background 0.25s;
+  }
+  .name-toggle[aria-checked="true"] .switch { background: var(--red-grad); box-shadow: inset 2px 2px 5px rgba(200,40,40,0.45), inset -2px -2px 5px rgba(255,160,160,0.6); }
+  .name-toggle[aria-checked="true"] .switch .knob { transform: translateX(20px); background: #fff; box-shadow: 1px 1px 4px rgba(160,30,30,0.45); }
+
+  .name-input-wrap[hidden] { display: none; }
+  .name-input-wrap { margin-top: 0.9rem; }
+
+  @media (prefers-reduced-motion: reduce) { .switch, .switch .knob { transition: none; } }
+  @media (min-width: 640px)  { .name-toggle-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; } }
+  @media (min-width: 1024px) { .name-toggle-grid { grid-template-columns: repeat(5, 1fr); } }
+
   .container { padding: 1.25rem; }
 
   .section-title { display: flex; align-items: center; gap: 0.6rem; margin: 0.9rem 0 1.1rem; }
@@ -805,9 +885,15 @@
 <main class="sheet" id="sheet">
 
 <!-- Name Input -->
-<div class="name-input-section">
-  <div class="name-input-wrap">
-    <input type="text" id="ordererName" class="name-input" placeholder="이름을 입력하세요 (예: 배원규 교수)" autocomplete="off">
+<div class="name-input-section" id="nameSection">
+  <div class="name-section-title">
+    <span class="num">00</span>
+    <h2>주문자 선택</h2>
+    <span class="name-selected" id="nameSelected">선택 안 됨</span>
+  </div>
+  <div class="name-toggle-grid" id="nameToggleGrid" role="radiogroup" aria-label="주문자 선택"></div>
+  <div class="name-input-wrap" id="nameInputWrap" hidden>
+    <input type="text" id="ordererName" class="name-input" placeholder="이름을 직접 입력하세요" autocomplete="off">
   </div>
 </div>
 
@@ -970,6 +1056,13 @@
   let orderList = [];  // Array of {id, person, menu, temp, size, note, timestamp}
   let currentDateKey = '';  // Set in init() after DOM ready
   const NAME_KEY = 'ssu-coffee-orderer';
+
+  // 학부 교수 명단 (표시 순서 고정 — 학부 명부 순서 그대로)
+  const PROFESSORS = [
+    '이향범', '강대승', '조남훈', '송경빈', '최우진', '임성훈', '변진규',
+    '박종후', '김기백', '윤성국', '배원규', '민선기', '박병권', '김선제'
+  ];
+  const CUSTOM_NAME = '__custom__';   // "직접 입력" 토글용 내부 값
 
   // ============ Date Helpers ============
   // 회의 스케줄: 매주 수요일 16:30 (커피는 회의 1시간 전 15:30에 발송)
@@ -1142,19 +1235,68 @@
     }
   });
 
-  // ============ Orderer Name (Local) ============
+  // ============ Orderer Name (토글 스위치 선택 + 직접 입력) ============
   function saveOrdererName() {
     try {
       const name = document.getElementById('ordererName').value.trim();
       if (name) localStorage.setItem(NAME_KEY, name);
+      else localStorage.removeItem(NAME_KEY);
     } catch(e) {}
+    updateNameSelectedLabel();
   }
 
   function restoreOrdererName() {
     try {
       const name = localStorage.getItem(NAME_KEY);
-      if (name) document.getElementById('ordererName').value = name;
+      if (!name) return;
+      document.getElementById('ordererName').value = name;
+      // 명단에 있으면 해당 토글, 없으면 "직접 입력" 토글을 켠다
+      setNameToggle(PROFESSORS.includes(name) ? name : CUSTOM_NAME, { keepInput: true });
     } catch(e) {}
+  }
+
+  function renderNameToggles() {
+    const grid = document.getElementById('nameToggleGrid');
+    if (!grid) return;
+    const row = (value, label, extra) => `
+      <button type="button" class="name-toggle${extra}" role="radio" aria-checked="false" data-name="${escapeHtml(value)}">
+        <span class="name-toggle-label">${escapeHtml(label)}</span>
+        <span class="switch" aria-hidden="true"><span class="knob"></span></span>
+      </button>`;
+    grid.innerHTML = PROFESSORS.map(n => row(n, n, '')).join('') + row(CUSTOM_NAME, '✏️ 직접 입력 (명단에 없는 경우)', ' custom');
+  }
+
+  // value: 명단 이름 | CUSTOM_NAME | null(모두 끔)
+  function setNameToggle(value, opts = {}) {
+    const input = document.getElementById('ordererName');
+    const wrap = document.getElementById('nameInputWrap');
+    document.querySelectorAll('.name-toggle').forEach(btn => {
+      btn.setAttribute('aria-checked', btn.dataset.name === value ? 'true' : 'false');
+    });
+    const isCustom = value === CUSTOM_NAME;
+    if (wrap) wrap.hidden = !isCustom;
+    if (isCustom) {
+      if (!opts.keepInput) { input.value = ''; try { input.focus(); } catch(e) {} }
+    } else {
+      input.value = value || '';
+    }
+    saveOrdererName();
+  }
+
+  function onNameToggleClick(e) {
+    const btn = e.target.closest('.name-toggle');
+    if (!btn) return;
+    // 이미 켜진 스위치를 다시 누르면 끈다 (토글)
+    const isOn = btn.getAttribute('aria-checked') === 'true';
+    setNameToggle(isOn ? null : btn.dataset.name);
+  }
+
+  function updateNameSelectedLabel() {
+    const el = document.getElementById('nameSelected');
+    if (!el) return;
+    const name = document.getElementById('ordererName').value.trim();
+    el.textContent = name ? `👤 ${name}` : '선택 안 됨';
+    el.classList.toggle('active', !!name);
   }
 
   // ============ Render ============
@@ -1293,10 +1435,11 @@
   function openOptionsModal(rank) {
     const person = document.getElementById('ordererName').value.trim();
     if (!person) {
-      showToast('⚠️ 먼저 이름을 입력해 주세요', true);
+      showToast('⚠️ 먼저 주문자 이름을 선택해 주세요', true);
+      const nameSection = document.getElementById('nameSection');
+      if (nameSection) nameSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const nameInput = document.getElementById('ordererName');
-      nameInput.focus();
-      nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (nameInput && !document.getElementById('nameInputWrap').hidden) nameInput.focus();
       return;
     }
 
@@ -1414,6 +1557,8 @@
   // ============ Event Listeners ============
   function attachEventListeners() {
     document.getElementById('ordererName').addEventListener('blur', saveOrdererName);
+    document.getElementById('ordererName').addEventListener('input', updateNameSelectedLabel);
+    document.getElementById('nameToggleGrid').addEventListener('click', onNameToggleClick);
 
     document.getElementById('menuGrid').addEventListener('click', e => {
       const item = e.target.closest('.menu-item');
@@ -1492,6 +1637,7 @@
     try {
       currentDateKey = getTodayKey();
       renderMenu();
+      renderNameToggles();
       setDateLabel();
       attachEventListeners();
       setupTopbar();
